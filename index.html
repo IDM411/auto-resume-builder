@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Architect</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a; 
+            --surface: rgba(30, 27, 75, 0.85);
+            --primary: #8b5cf6; 
+            --primary-hover: #7c3aed;
+            --accent: #d8b4fe; 
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #4338ca;
+            --radius: 16px;
+            --glow: 0 0 25px rgba(139, 92, 246, 0.25);
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            padding: 40px 20px; 
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a); 
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .container { 
+            max-width: 800px; 
+            margin: auto; 
+            background: var(--surface); 
+            backdrop-filter: blur(16px);
+            padding: 40px; 
+            border-radius: var(--radius); 
+            box-shadow: var(--glow); 
+            border: 1px solid var(--border);
+            transition: max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 28px; /* Clean vertical spacing */
+        }
+        
+        .expanded { max-width: 1200px; }
+
+        h2 { font-weight: 800; font-size: 28px; color: var(--accent); margin: 0; text-shadow: 0 0 10px rgba(216, 180, 254, 0.3); }
+
+        .input-group { display: flex; flex-direction: column; gap: 10px; }
+        label { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
+        
+        .file-upload { 
+            padding: 24px;
+            border: 2px dashed var(--border); 
+            background: rgba(15, 23, 42, 0.5); 
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        textarea { 
+            width: 100%; height: 180px; 
+            background: rgba(15, 23, 42, 0.7); 
+            border: 1px solid var(--border); 
+            color: white; 
+            padding: 16px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+        textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); }
+        
+        /* PULSING BUTTON */
+        #generateBtn { 
+            padding: 18px;
+            background: var(--primary); 
+            color: white;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+            animation: pulseGlow 2s infinite; /* The Pulse */
+            transition: all 0.3s ease;
+        }
+        #generateBtn:hover { transform: translateY(-2px); background: var(--primary-hover); animation: none; box-shadow: 0 0 30px rgba(139, 92, 246, 0.6); }
+        #generateBtn:disabled { background: #475569; animation: none; opacity: 0.6; cursor: not-allowed; }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(139, 92, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+        }
+
+        /* PROGRESS UI */
+        .progress-wrapper { display: none; margin-top: 10px; }
+        .progress-container { width: 100%; background: #0f172a; border-radius: 20px; height: 12px; overflow: hidden; border: 1px solid var(--border); }
+        .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899); box-shadow: 0 0 12px #8b5cf6; }
+
+        /* DASHBOARD GRID */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 30px; animation: fadeIn 0.8s ease; }
+        .score-card { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center; }
+        .strategy-card { background: rgba(139, 92, 246, 0.08); border-radius: 12px; padding: 24px; border: 1px solid var(--border); }
+        .strategy-card li { margin-bottom: 10px; padding-left: 10px; border-left: 2px solid var(--primary); list-style: none; font-size: 13px; color: #e2e8f0; }
+
+        .preview-pane { 
+            flex: 1; background: rgba(15, 23, 42, 0.5); padding: 24px; border: 1px solid var(--border); 
+            border-radius: 12px; max-height: 700px; overflow-y: auto; color: #e2e8f0;
+        }
+        .new-resume-pane { border-top: 4px solid var(--primary); }
+
+        .action-btn-group { display: flex; gap: 12px; margin-top: 24px; }
+        .btn-word { background: #2563eb; } .btn-pdf { background: #dc2626; } .btn-latex { background: #111827; flex: 1.5; border: 1px solid var(--border); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="mainContainer" class="container">
+        <h2>✨ AI Resume Architect</h2>
+        
+        <div class="input-group">
+            <label>1. Master Resume (PDF or Word)</label>
+            <div class="file-upload">
+                <input type="file" id="resumeFile" accept=".pdf,.docx">
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label>2. Job Description</label>
+            <textarea id="jdText" placeholder="Paste the target job requirements here..."></textarea>
+        </div>
+        
+        <button id="generateBtn" onclick="sendToAI()">Analyze & Tailor Resume</button>
+
+        <div id="progressWrapper" class="progress-wrapper">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span id="statusText" style="color: var(--accent); font-size: 13px;">Initializing AI Architect...</span>
+                <span id="percentText" style="font-weight: 700; color: var(--primary);">0%</span>
+            </div>
+            <div class="progress-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <div style="text-align: center; margin-top: 10px;">
+                <span id="timerText" style="font-size: 11px; color: var(--text-muted); font-family: monospace;">Time Elapsed: 0.0s</span>
+            </div>
+        </div>
+
+        <div id="result-box"></div>
+    </div>
+
+    <script>
+        let generatedResumeData = null;
+
+        async function sendToAI() {
+            const fileInput = document.getElementById('resumeFile');
+            const jd = document.getElementById('jdText').value;
+            const resultBox = document.getElementById('result-box');
+            const btn = document.getElementById('generateBtn');
+            const container = document.getElementById('mainContainer');
+            const progressWrapper = document.getElementById('progressWrapper');
+            const progressBar = document.getElementById('progressBar');
+            const percentText = document.getElementById('percentText');
+            const timerText = document.getElementById('timerText');
+            const statusText = document.getElementById('statusText');
+            
+            if(fileInput.files.length === 0 || !jd) {
+                alert("Please upload a resume AND paste a job description!");
+                return;
+            }
+
+            resultBox.style.display = "none";
+            progressWrapper.style.display = "block";
+            btn.innerText = "Architecting...";
+            btn.disabled = true;
+
+            let start = Date.now();
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 45) {
+                    progress += 1.2; 
+                    statusText.innerText = "Synchronizing with Qwen 32B model...";
+                } else if (progress < 88) {
+                    progress += 0.2; 
+                    statusText.innerText = "Re-indexing ATS keywords...";
+                } else if (progress < 98) {
+                    progress += 0.05; 
+                    statusText.innerText = "Validating JSON integrity...";
+                }
+                progressBar.style.width = progress + "%";
+                percentText.innerText = Math.round(progress) + "%";
+            }, 400);
+
+            const clockInterval = setInterval(() => {
+                let elapsed = ((Date.now() - start) / 1000).toFixed(1);
+                timerText.innerText = `Time Elapsed: ${elapsed}s`;
+            }, 100);
+
+            const formData = new FormData();
+            formData.append("resume_file", fileInput.files[0]);
+            formData.append("job_description", jd);
+
+            try {
+                const response = await fetch('/api/analyze-and-tailor', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error("Processing error. Check your terminal.");
+                
+                const payload = await response.json();
+                
+                clearInterval(progressInterval);
+                clearInterval(clockInterval);
+                progressBar.style.width = "100%";
+                percentText.innerText = "100%";
+                statusText.innerText = "Protocol Complete.";
+
+                setTimeout(() => {
+                    progressWrapper.style.display = "none";
+                    container.classList.add('expanded');
+                    resultBox.style.display = "block";
+                    renderResults(payload.original_text, payload.analysis);
+                }, 600);
+
+            } catch (error) {
+                clearInterval(progressInterval);
+                clearInterval(clockInterval);
+                progressWrapper.style.display = "none";
+                resultBox.style.display = "block";
+                resultBox.innerHTML = `<div style="padding: 20px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #fca5a5; border-radius: 8px;"><strong>Error:</strong> ${error.message}</div>`;
+                btn.innerText = "Analyze & Tailor Resume";
+                btn.disabled = false;
+            }
+        }
+
+        function renderResults(originalText, data) {
+    let resume = data.tailored_resume || data; 
+    generatedResumeData = resume; 
+
+    // 1. START CONTENT WITH COMPANY INTEL (If available)
+    let htmlContent = "";
+    
+    if(data.company_intel) {
+        htmlContent += `
+            <div class="strategy-card" style="margin-bottom: 24px; border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.05);">
+                <h3 style="color: #10b981; margin-top: 0; font-size: 14px; text-transform: uppercase;">🏢 Company Scout Report</h3>
+                <p style="font-size: 13px; margin-bottom: 8px;"><strong>Mission:</strong> ${data.company_intel.mission}</p>
+                <p style="font-size: 13px; margin-bottom: 8px;"><strong>History:</strong> ${data.company_intel.history}</p>
+                <div style="font-size: 12px; color: var(--accent); border-top: 1px solid rgba(16, 185, 129, 0.2); padding-top: 8px; margin-top: 8px;">
+                    ✨ <strong>Culture Alignment:</strong> ${data.company_intel.missions_aligned}
+                </div>
+            </div>
+        `;
+    }
+
+    // 2. DASHBOARD GRID (Score + Strategy)
+    htmlContent += `
+        <div class="dashboard-grid">
+            <div class="score-card">
+                <div style="font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">ATS MATCH</div>
+                <div style="font-size: 42px; font-weight: 800; color: #ef4444; line-height: 1;">${data.original_ats_score || '??'}<span style="font-size: 16px; color: var(--text-muted);">/100</span></div>
+                <div style="margin: 10px 0; color: var(--primary); font-size: 18px;">⬇</div>
+                <div style="font-size: 42px; font-weight: 800; color: #10b981; line-height: 1;">100<span style="font-size: 16px; color: var(--text-muted);">/100</span></div>
+                <div style="margin-top: 10px; font-size: 12px; color: #10b981; font-weight: 600;">Tailoring Optimized 🏆</div>
+            </div>
+
+            <div class="strategy-card">
+                <h3 style="margin-top: 0; font-size: 15px; color: var(--accent);">🎯 Optimization Strategy</h3>
+                <ul style="margin: 0; padding-left: 18px; font-size: 13px; color: #e2e8f0; line-height: 1.6;">
+                    ${(data.optimization_report || ["Keywords re-indexed", "STAR method applied", "Skills prioritized"]).map(item => `<li style="margin-bottom: 6px; border-left: 2px solid var(--primary); padding-left: 10px; list-style:none;">${item}</li>`).join('')}
+                </ul>
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); font-style: italic;">
+                    " ${data.critique || 'Optimization successful.'} "
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 24px;">
+            <div class="preview-pane">
+                <h3 style="color: var(--accent); margin-top: 0; font-size: 13px; text-transform: uppercase;">📄 Original</h3>
+                <pre style="white-space: pre-wrap; font-size: 11px; color: var(--text-muted); line-height: 1.5;">${originalText}</pre>
+            </div>
+
+            <div class="preview-pane new-resume-pane">
+                <h3 style="color: var(--primary); margin-top: 0; font-size: 13px; text-transform: uppercase;">✨ Tailored</h3>
+                <div style="margin-bottom: 16px; font-size: 14px; line-height: 1.6;">
+                    <strong>Summary:</strong> ${resume.summary}
+                </div>
+    `;
+
+    // Render Experience
+    if(resume.experience) {
+        htmlContent += `<h4 style="color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin: 20px 0 10px;">Experience</h4>`;
+        resume.experience.forEach(job => {
+            htmlContent += `
+                <div style="margin-top: 12px; font-size: 13px;">
+                    <div style="display: flex; justify-content: space-between;"><strong>${job.title}</strong><span>${job.date}</span></div>
+                    <div style="color: var(--text-muted); margin-bottom: 8px;"><em>${job.company}</em></div>
+                    <div style="background: rgba(139, 92, 246, 0.1); padding: 8px; margin: 8px 0; font-size: 11px; color: var(--accent); border-radius: 4px; border-left: 2px solid var(--primary);">💡 ${job.explanation || 'Strategized for impact.'}</div>
+                    <ul style="padding-left: 18px;">${job.bullets.map(b => `<li style="margin-bottom: 4px;">${b}</li>`).join('')}</ul>
+                </div>`;
+        });
+    }
+
+    // Render Projects
+    if(resume.projects) {
+        htmlContent += `<h4 style="color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin: 20px 0 10px;">Projects</h4>`;
+        resume.projects.forEach(proj => {
+            htmlContent += `<div style="margin-top: 10px; font-size: 13px;"><strong>${proj.name}</strong> | <em>${proj.technologies}</em><ul style="padding-left: 18px; margin-top: 5px;">${proj.bullets.map(b => `<li>${b}</li>`).join('')}</ul></div>`;
+        });
+    }
+
+    htmlContent += `
+        <h4 style="color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin: 20px 0 10px;">Skills</h4>
+        <p style="font-size: 13px; line-height: 1.6;">${resume.skills.join(", ")}</p>
+        </div></div>
+
+        <h3 style="color: var(--accent); margin: 40px 0 20px; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;">🔍 Strategic Change Log (Diff View)</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+    `;
+
+    // Experience Changes
+    if(resume.experience) {
+        resume.experience.forEach(job => {
+            if(job.changes && job.changes.length > 0) {
+                job.changes.forEach(change => {
+                    htmlContent += `
+                        <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                            <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 10px; font-weight: 700; text-transform: uppercase;">${job.title} @ ${job.company}</div>
+                            <div style="color: #f87171; text-decoration: line-through; font-size: 12px; margin-bottom: 5px;">${change.original}</div>
+                            <div style="color: #34d399; font-weight: 600; font-size: 13px; margin-bottom: 10px;">${change.updated}</div>
+                            <div style="color: var(--accent); font-size: 12px; font-style: italic; display: flex; align-items: baseline; gap: 8px;">
+                                <span style="font-weight: 800; font-style: normal; font-size: 10px; color: var(--primary);">➔ REASON:</span> ${change.reason}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        });
+    }
+
+    htmlContent += `
+        </div>
+        <div class="action-btn-group">
+            <button onclick="downloadDoc('docx')" class="btn-word">💾 Export Word</button>
+            <button onclick="downloadDoc('pdf')" class="btn-pdf">📄 Export PDF</button>
+            <button id="latexBtn" onclick="copyLatex()" class="btn-latex">📋 Copy LaTeX</button>
+        </div>`;
+
+    document.getElementById('result-box').innerHTML = htmlContent;
+    document.getElementById('generateBtn').innerText = "Analyze & Tailor Resume";
+    document.getElementById('generateBtn').disabled = false;
+}
+
+        async function downloadDoc(type) {
+            if (!generatedResumeData) return;
+            const endpoint = type === 'pdf' ? '/api/download-pdf' : '/api/download-docx';
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(generatedResumeData)
+            });
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Tailored_Resume.${type === 'pdf' ? 'pdf' : 'docx'}`;
+            a.click();
+        }
+
+        async function copyLatex() {
+            if (!generatedResumeData) return;
+            const btn = document.getElementById('latexBtn');
+            const response = await fetch('/api/generate-latex', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(generatedResumeData)
+            });
+            const data = await response.json();
+            await navigator.clipboard.writeText(data.latex_code);
+            btn.innerText = "✅ Copied!";
+            setTimeout(() => btn.innerText = "📋 Copy LaTeX", 2000);
+        }
+    </script>
+</body>
+</html>
